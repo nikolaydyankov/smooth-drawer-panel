@@ -1,0 +1,126 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+
+<polymer-element name="smooth-drawer-panel" attributes="" extends="core-drawer-panel">
+    <template>
+    <style>
+    :host {
+        display: block;
+    }
+    </style>
+    <shadow></shadow>
+</template>
+<script>
+(function () {
+    Polymer({
+        // ** These variables are used to calculate the speed of the swipe gesture
+        velocity : 0,
+        lastX : 0,
+        // **
+
+        togglePanel: function() {
+            // ** When the user presses the button which toggles the sidebar,
+            // ** we want the transition to default back to it's original settings
+            var s = this.$.drawer.style;
+            var duration = 0.3;
+
+            if (this.hasTransform) {
+                s.transitionDuration = duration + 's';
+                s.transitionTimingFunction = 'ease-in-out';
+            } else {
+                s.webkitTransitionDuration = duration + 's';
+                s.webkitTransitionTimingFunction = 'ease-in-out';
+            }
+            // **
+
+            this.selected = this.isMainSelected() ? 'drawer' : 'main';
+        },
+
+        trackx : function(e) {
+            if (this.dragging) {
+                if (this.peeking) {
+                    if (Math.abs(e.dx) <= this.edgeSwipeSensitivity) {
+                        return; // Ignore trackx until we move past the edge peek.
+                    }
+                    this.peeking = false;
+                }
+
+                // ** Calculate velocity based on the last and current delta X
+                this.velocity = e.dx - this.lastX;
+                // ** Save the current delta X
+                this.lastX = e.dx;
+                // **
+
+                this.moveDrawer(this.translateXForDeltaX(e.dx));
+            }
+        },
+
+        trackStart : function(e) {
+            if (this.swipeAllowed()) {
+                this.dragging = true;
+                // ** When a new swipe gesture begins, reset the velocity to 0
+                this.velocity = 0;
+                this.lastX = 0;
+                // **
+
+                if (this.isMainSelected()) {
+                    this.dragging = this.peeking || this.isEdgeTouch(e);
+                }
+
+                if (this.dragging) {
+                    this.width = this.$.drawer.offsetWidth;
+                    this.transition = false;
+
+                    // ** When the user starts a swipe gesture, we want the sidebar's transition
+                    // ** to have a small duration and only 'ease-out' timing function
+                    var s = this.$.drawer.style;
+                    var duration = 0.075;
+
+                    if (this.hasTransform) {
+                        s.transitionDuration = duration + 's';
+                        s.transitionTimingFunction = 'ease-out';
+                    } else {
+                        s.webkitTransitionDuration = duration + 's';
+                        s.webkitTransitionTimingFunction = 'ease-out';
+                    }
+                    // **
+
+                    e.preventTap();
+                }
+            }
+        },
+
+        trackEnd : function(e) {
+            if (this.dragging) {
+                this.dragging = false;
+                this.transition = true;
+                this.moveDrawer(null);
+
+                if (this.rightDrawer) {
+                    this.selected = e.xDirection > 0 ? 'main' : 'drawer';
+                } else {
+                    this.selected = e.xDirection > 0 ? 'drawer' : 'main';
+                }
+
+                // ** When the swipe gesture ends, set the transition duration to
+                // ** an inverse square of the normalized velocity
+                // ** and change the transitionTimingFunction to 'ease-out' for smoothness
+                var s = this.$.drawer.style;
+                var duration = 1 / Math.abs(this.velocity/4);
+
+                duration = Math.max(duration, 0.1);
+                duration = Math.min(duration, 1);
+
+                if (this.hasTransform) {
+                    s.transitionDuration = duration + 's';
+                    s.transitionTimingFunction = 'ease-out';
+                } else {
+                    s.webkitTransitionDuration = duration + 's';
+                    s.webkitTransitionTimingFunction = 'ease-out';
+                }
+                // **
+            }
+        },
+    });
+})();
+</script>
+</polymer-element>
